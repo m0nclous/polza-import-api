@@ -30,6 +30,8 @@ return [
 
     'env' => env('APP_ENV', 'production'),
 
+    'global_prefix' => env('APP_GLOBAL_PREFIX', ''),
+
     /*
     |--------------------------------------------------------------------------
     | Application Debug Mode
