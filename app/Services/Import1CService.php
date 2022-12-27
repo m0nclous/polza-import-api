@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Wp\Term;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 use SimpleXMLElement;
 
@@ -30,7 +32,7 @@ class Import1CService extends AbstractFile1CService
             $childSimpleXMLElements = $simpleXMLElement->{'Группы'};
 
             if ($childSimpleXMLElements) {
-                $array = $array + array_map(fn ($item) => $item + ['parent' => $guid], $this->getGroups($childSimpleXMLElements));
+                $array = $array + array_map(fn ($item) => $item + ['parent' => $guid], $this->getGroupsFromXml($childSimpleXMLElements));
             }
         }
 
@@ -53,5 +55,15 @@ class Import1CService extends AbstractFile1CService
         }
 
         return Term::insert($termsData);
+    }
+
+    public function setSyncGroupsCache(array $groups): void
+    {
+        Cache::set('syncGroups', $groups, Carbon::now()->addHour());
+    }
+
+    public function getSyncGroupsCache(): ?array
+    {
+        return Cache::get('syncGroups');
     }
 }

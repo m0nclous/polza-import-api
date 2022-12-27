@@ -16,6 +16,11 @@ class Term extends Model {
 
     public function meta(): HasMany
     {
-        return $this->hasMany(TermMeta::class, 'meta_id');
+        return $this->hasMany(TermMeta::class, 'term_id');
+    }
+
+    public function taxonomies(): HasMany
+    {
+        return $this->hasMany(TermTaxonomy::class, 'term_id');
     }
 }
