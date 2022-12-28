@@ -185,7 +185,12 @@ class Import1CService extends AbstractFile1CService
             $guid = (string) $simpleXMLElement->{'Ид'};
             $sku = (string) $simpleXMLElement->{'Артикул'};
             $content = (string) $simpleXMLElement->{'Описание'};
-            $meta = [];
+
+            $meta = [
+                '_manage_stock' => 'yes',
+                '_stock' => 0,
+                '_stock_status' => 'outofstock',
+            ];
 
             $array[$guid] = [
                 'name' => (string) $simpleXMLElement->{'Наименование'},
