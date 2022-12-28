@@ -2,11 +2,15 @@
 
 namespace App\Http\Controllers\Import;
 
+use App\Models\Wp\PostMeta;
+use App\Models\Wp\Product;
 use App\Models\Wp\Term;
 use App\Models\Wp\TermMeta;
+use App\Models\Wp\TermRelationships;
 use App\Models\Wp\TermTaxonomy;
 use App\Services\Import1CService;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class ImportController extends Controller
@@ -39,5 +43,45 @@ class ImportController extends Controller
         $import1CService->setSyncGroupsCache($groups);
 
         return [ 'count' => count($groups) ];
+    }
+
+    public function syncProducts(Import1CService $import1CService)
+    {
+        // Берём товары из XML
+        $products = $import1CService->getProductsFromXml();
+        $currentTime = Carbon::now();
+
+        $defaultAttributes = (new Product)->getAttributes();
+
+        foreach ($products as $guid => &$productsItem) {
+            if (isset($productsItem['id'])) continue;
+
+            $product = Product::create([
+                'post_title' => $productsItem['name'],
+                'post_name' => Str::slug($productsItem['name']),
+                'guid' => $guid,
+                'post_content' => $productsItem['content'] ?? '',
+                'post_date' => $currentTime,
+                'post_date_gmt' => $currentTime,
+                'post_modified' => $currentTime,
+                'post_modified_gmt' => $currentTime,
+            ] + $defaultAttributes);
+
+            $meta = [];
+
+            foreach ($productsItem['meta'] ?? [] as $key => $value) {
+                $meta[] = PostMeta::make([ 'meta_key' => $key, 'meta_value' => $value ]);
+            }
+
+            $product->meta()->saveMany($meta);
+
+            if ($productsItem['group'] ?? null) {
+                $product->termRelationships()->save(TermRelationships::make([
+                    'term_taxonomy_id' => $productsItem['group']
+                ]));
+            }
+        }
+
+        return [ 'count' => count($products) ];
     }
 }
