@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Wp\TermMeta;
+use App\Models\Wp\TermTaxonomy;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
@@ -176,6 +177,7 @@ class Import1CService extends AbstractFile1CService
         $array = [];
         $propertiesFromXml = $this->getPropertiesFromXml();
         $groupsFromApp = $this->getGroupsFromApp();
+        $defaultGroup = TermTaxonomy::uncategorized()->first();
 
         foreach ($this->xml->{'Каталог'}->{'Товары'}->{'Товар'} as $simpleXMLElement) {
             $simpleXMLElementAttributes = ((array) $simpleXMLElement->attributes())['@attributes'] ?? [];
@@ -233,6 +235,8 @@ class Import1CService extends AbstractFile1CService
             }
 
             if ($meta) $array[$guid]['meta'] = $meta;
+
+            $array[$guid]['group'] = $array[$guid]['group'] ?? $defaultGroup->term_taxonomy_id ?? null;
         }
 
         return $array;

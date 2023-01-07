@@ -2,6 +2,7 @@
 
 namespace App\Models\Wp;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -23,6 +24,39 @@ class TermTaxonomy extends Model {
 
     public function term(): BelongsTo
     {
-        return $this->belongsTo(Term::class);
+        return $this->belongsTo(Term::class, 'term_id');
+    }
+
+    /** @noinspection PhpUnused */
+    public function scopeProductType(Builder $query): Builder
+    {
+        return $query->where('taxonomy', 'product_type');
+    }
+
+    /** @noinspection PhpUnused */
+    public function scopeProductCat(Builder $query): Builder
+    {
+        return $query->where('taxonomy', 'product_cat');
+    }
+
+    /** @noinspection PhpUnused */
+    public function scopeSimpleProduct(Builder $query): Builder
+    {
+        /** @noinspection PhpPossiblePolymorphicInvocationInspection */
+        return $query->productType()->whereHas('term', fn($term) => $term->where('slug', 'simple'));
+    }
+
+    /** @noinspection PhpUnused */
+    public function scopeVariableProduct(Builder $query): Builder
+    {
+        /** @noinspection PhpPossiblePolymorphicInvocationInspection */
+        return $query->productType()->whereHas('term', fn($term) => $term->where('slug', 'variable'));
+    }
+
+    /** @noinspection PhpUnused */
+    public function scopeUncategorized(Builder $query): Builder
+    {
+        /** @noinspection PhpPossiblePolymorphicInvocationInspection */
+        return $query->productCat()->whereHas('term', fn($term) => $term->where('slug', 'uncategorized'));
     }
 }
