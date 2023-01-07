@@ -16,7 +16,7 @@
                     limit: {{ config('filesystems.upload_per_request') }}
                 })).then((response) => response.json());
 
-                if (response.cursor) await syncImages(response.cursor);
+                if (response.cursor !== cursor) await syncImages(response.cursor);
             }
 
             document.getElementById('huy').addEventListener('click', () => {
