@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers\Import;
 
-use App\Models\Wp\Post;
-use FTP\Connection;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;

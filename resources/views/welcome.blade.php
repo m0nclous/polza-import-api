@@ -11,7 +11,7 @@
 
         <script>
             async function syncImages(cursor) {
-                const response = await fetch('/api/import/images/products/sync?' + new URLSearchParams({
+                const response = await fetch('api/import/images/products/sync?' + new URLSearchParams({
                     cursor: cursor || 0,
                 })).then((response) => response.json());
 
