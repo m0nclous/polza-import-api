@@ -28,6 +28,8 @@ return [
     |
     */
 
+    'upload_per_request' => env('UPLOAD_PER_REQUEST', 10),
+
     'disks' => [
 
         'local' => [
@@ -56,9 +58,9 @@ return [
             'throw' => false,
         ],
 
-        'wordpress' => [
+        'wordpress-upload' => [
             'driver' => 'local',
-            'root' => env('WP_UPLOAD_IMG_DIR'),
+            'root' => env('WP_UPLOAD_DIR'),
             'throw' => true,
         ],
 

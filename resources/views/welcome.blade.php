@@ -13,6 +13,7 @@
             async function syncImages(cursor) {
                 const response = await fetch('api/import/images/products/sync?' + new URLSearchParams({
                     cursor: cursor || 0,
+                    limit: {{ config('filesystems.upload_per_request') }}
                 })).then((response) => response.json());
 
                 if (response.cursor) await syncImages(response.cursor);

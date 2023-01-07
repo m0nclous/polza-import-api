@@ -11,7 +11,7 @@ class ImagesController extends Controller
     public function productsSync(Request $request)
     {
         $cursor = $request->get('cursor');
-        $limit = $request->get('limit', 10);
+        $limit = (int) $request->get('limit', config('filesystems.upload_per_request'));
         $storage = Storage::disk('ftp');
         $directories = $storage->directories('/img/');
 
@@ -24,8 +24,7 @@ class ImagesController extends Controller
             $files = $storage->files($directory);
 
             foreach ($files as $filename) {
-                $filenameParts = explode('/', $filename);
-                Storage::disk('wordpress')->put(end($filenameParts), $storage->get($filename));
+                Storage::disk('wordpress-upload')->put($filename, $storage->get($filename));
             }
 
             $current++;
