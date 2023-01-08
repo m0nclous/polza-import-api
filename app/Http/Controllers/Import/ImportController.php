@@ -11,6 +11,7 @@ use App\Models\Wp\TermTaxonomy;
 use App\Services\Import1CService;
 use App\Services\ImportCacheImageService;
 use App\Services\ImportCacheService;
+use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -51,9 +52,12 @@ class ImportController extends Controller
         return ['count' => count($groups)];
     }
 
-    public function productsSync()
+    public function productsSync(Request $request)
     {
-        $productsCache = ImportCacheService::get();
+        $cursor = $request->input('cursor', 1);
+        $_productsCache = ImportCacheService::get();
+        $productsCacheChunks = array_chunk($_productsCache, 10000, true);
+        $productsCache = $productsCacheChunks[$cursor - 1] ?? [];
 
         $postDefaultAttributes = (new Post)->getAttributes();
         $attributesMeta = [];
