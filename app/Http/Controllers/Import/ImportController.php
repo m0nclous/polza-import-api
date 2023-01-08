@@ -9,6 +9,7 @@ use App\Models\Wp\TermMeta;
 use App\Models\Wp\TermRelationships;
 use App\Models\Wp\TermTaxonomy;
 use App\Services\Import1CService;
+use App\Services\ImportCacheImageService;
 use App\Services\ImportCacheService;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
@@ -52,58 +53,10 @@ class ImportController extends Controller
 
     public function productsSync()
     {
-        set_time_limit(60 * 5);
-
         $productsCache = ImportCacheService::get();
-        $wpUploadStorage = Storage::disk('wordpress-upload');
 
         $postDefaultAttributes = (new Post)->getAttributes();
-        $metaModels = [];
-
-        $imagePostsAttributes = [];
-        $imageMetaAttributes = [];
-        foreach ($wpUploadStorage->allFiles('/img') as $file) {
-            $filePathInfo = pathinfo($file);
-            $__temp = explode('/', $filePathInfo['dirname']);
-
-            if (!Str::isUuid($filePathInfo['filename'])) continue;
-
-            $imagePostsAttributes[] = array_merge($postDefaultAttributes, [
-                'post_title' => $filePathInfo['filename'],
-                'post_name' => Str::slug($filePathInfo['filename']),
-                'post_content' => end($__temp),
-                'post_status' => 'inherit',
-                'post_type' => 'attachment',
-                'post_mime_type' => $wpUploadStorage->mimeType($file),
-                'guid' => $filePathInfo['filename'],
-            ]);
-
-            $imageMetaAttributes[$filePathInfo['filename']] = [
-                '_wp_attached_file' => "1c/$file",
-                '_wp_attachment_metadata' => serialize([
-                    'file' => "1c/$file"
-                ])
-            ];
-        }
-
-        foreach (array_chunk($imagePostsAttributes, 1000) as $chunkProductsSimpleAttributes) {
-            Post::upsert(
-                $chunkProductsSimpleAttributes,
-                ['guid'],
-                ['post_title', 'post_name', 'post_content', 'post_mime_type']
-            );
-        }
-
-        $postsAttachment = Post::where('post_type', 'attachment')->get(['ID', 'guid', 'post_content']);
-        foreach ($postsAttachment as $post) {
-            if (!isset($imageMetaAttributes[$post->guid])) {
-                continue;
-            }
-
-            foreach ($imageMetaAttributes[$post->guid] as $key => $value) {
-                $metaModels[] = ['post_id' => $post->ID, 'meta_key' => $key, 'meta_value' => $value];
-            }
-        }
+        $attributesMeta = [];
 
         $simpleProductTermTaxonomy = TermTaxonomy::simpleProduct()->first();
         $variationProductTermTaxonomy = TermTaxonomy::variableProduct()->first();
@@ -165,7 +118,7 @@ class ImportController extends Controller
             }
 
             foreach ($productCache['meta'] ?? [] as $key => $value) {
-                $metaModels[] = ['post_id' => $post->ID, 'meta_key' => $key, 'meta_value' => $value];
+                $attributesMeta[] = ['post_id' => $post->ID, 'meta_key' => $key, 'meta_value' => $value];
             }
 
             if (isset($productCache['group'])) {
@@ -180,27 +133,10 @@ class ImportController extends Controller
                         : $variationProductTermTaxonomy->term_taxonomy_id
                 ];
             }
-
-            $postAttachments = $postsAttachment->where(fn($item) => $item->post_content === $post->guid);
-            if ($postAttachments->count() > 0) {
-                $gallery = $postAttachments->map->ID->toArray();
-                $thumbnailId = current($gallery);
-                $gallery = array_diff($gallery, [$thumbnailId]);
-
-                $metaModels[] = ['post_id' => $post->ID, 'meta_key' => '_thumbnail_id', 'meta_value' => $thumbnailId];
-
-                if ($gallery) {
-                    $metaModels[] = [
-                        'post_id' => $post->ID,
-                        'meta_key' => '_product_image_gallery',
-                        'meta_value' => implode(',', $gallery)
-                    ];
-                }
-            }
         }
 
-        foreach (array_chunk($metaModels, 1000) as $chunkMetaModels) {
-            PostMeta::upsert($chunkMetaModels, ['guid'], ['meta_value']);
+        foreach (array_chunk($attributesMeta, 1000) as $attributesMetaChunk) {
+            PostMeta::upsert($attributesMetaChunk, ['guid'], ['meta_value']);
         }
 
         foreach (array_chunk($termRelationshipModels, 1000) as $chunkTermRelationshipModels) {
@@ -212,5 +148,78 @@ class ImportController extends Controller
         }
 
         return ['count' => count($productsCache)];
+    }
+
+    public function imageInsert()
+    {
+        $postDefaultAttributes = (new Post)->getAttributes();
+        $imagesByGuid = array_filter(ImportCacheImageService::get(), fn($item) => !isset($item['ID']));
+        $posts = Post::whereIn('guid', array_map(fn($item) => $item['postGuid'], $imagesByGuid))->get(['ID', 'guid']
+        )->keyBy('guid');
+
+        $attributes = [];
+        $metaAttributes = [];
+        $meta = [];
+
+        foreach ($imagesByGuid as $guid => $image) {
+            if (!$post = $posts->get($image['postGuid'])) {
+                continue;
+            }
+
+            $attributes[] = array_merge($postDefaultAttributes, [
+                'post_title' => $image['postGuid'],
+                'post_name' => $image['postGuid'],
+                'post_parent' => $post->ID,
+                'post_status' => 'inherit',
+                'post_type' => 'attachment',
+                'post_mime_type' => Storage::disk('wordpress-upload')->mimeType($image['file']),
+                'guid' => $guid,
+            ]);
+
+            $meta[$guid] = [
+                '_wp_attached_file' => $image['file'],
+                '_wp_attachment_metadata' => serialize(['file' => $image['file']]),
+            ];
+        }
+
+        foreach (array_chunk($attributes, 1000) as $attributesChunk) {
+            Post::insert($attributesChunk);
+
+            $attachmentPostGroups = Post::whereIn('guid', array_map(fn($item) => $item['guid'], $attributesChunk))
+                ->get(['ID', 'guid', 'post_parent'])
+                ->groupBy('post_parent');
+
+            foreach ($attachmentPostGroups as $postParent => $postGroup) {
+                $gallery = $postGroup->map->ID->toArray();
+                $thumbnailId = $gallery[0];
+                $gallery = array_diff($gallery, [$thumbnailId]);
+
+                $metaAttributes[] = [
+                    'post_id' => $postParent,
+                    'meta_key' => '_thumbnail_id',
+                    'meta_value' => $thumbnailId
+                ];
+
+                if ($gallery) {
+                    $metaAttributes[] = [
+                        'post_id' => $postParent,
+                        'meta_key' => '_product_image_gallery',
+                        'meta_value' => implode(',', $gallery)
+                    ];
+                }
+
+                foreach ($postGroup as $post) {
+                    foreach ($meta[$post->guid] ?? [] as $key => $value) {
+                        $metaAttributes[] = ['post_id' => $post->ID, 'meta_key' => $key, 'meta_value' => $value];
+                    }
+                }
+            }
+        }
+
+        foreach (array_chunk($metaAttributes, 1000) as $metaAttributesChunk) {
+            PostMeta::upsert($metaAttributesChunk, ['meta_key', 'meta_value'], ['meta_value']);
+        }
+
+        return response()->json(['success' => true]);
     }
 }

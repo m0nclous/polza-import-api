@@ -64,6 +64,7 @@ class Post extends Model {
         return $this->hasMany(PostMeta::class, 'post_id');
     }
 
+    /** @noinspection PhpUnused */
     public function termRelationships(): HasMany
     {
         return $this->hasMany(TermRelationships::class, 'object_id');
@@ -79,5 +80,11 @@ class Post extends Model {
     public function scopeTypeVariation(Builder $query): Builder
     {
         return $query->where('post_type', 'product_variation');
+    }
+
+    /** @noinspection PhpUnused */
+    public function scopeTypeAttachment(Builder $query): Builder
+    {
+        return $query->where('post_type', 'attachment');
     }
 }
