@@ -51,7 +51,7 @@ class Offers1CService extends AbstractFile1CService
             $array[$guidVariation ?? $guid]['meta'] = $meta;
 
             if ($guidVariation) {
-                $variantKey = Str::lower(urlencode('вариант'));
+                $variantKey = 'variant';
 
                 $array[$guidVariation]['parent'] = $guid;
                 $array[$guidVariation]['meta']['attribute_' . $variantKey] = $array[$guidVariation]['name'];
