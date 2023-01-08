@@ -21,10 +21,14 @@ class Offers1CService extends AbstractFile1CService
             $guid = $guidParts[0];
             $guidVariation = $guidParts[1] ?? null;
 
-            $meta = [
-                '_stock' => (int) $simpleXMLElement->{'Количество'},
-                '_regular_price' => (int) $simpleXMLElement->{'Цены'}->{'Цена'}->{'ЦенаЗаЕдиницу'},
-            ];
+            if ($guidVariation) {
+                $meta = [];
+            } else {
+                $meta = $array[$guid]['meta'];
+            }
+
+            $meta['_stock'] = (int) $simpleXMLElement->{'Количество'};
+            $meta['_regular_price'] = (int) $simpleXMLElement->{'Цены'}->{'Цена'}->{'ЦенаЗаЕдиницу'};
 
             if ($guidVariation) {
                 $array[$guid]['meta']['_stock'] += $meta['_stock'];
@@ -43,10 +47,8 @@ class Offers1CService extends AbstractFile1CService
                 $meta["_stock_$stockGuid"] = $stockValue;
             }
 
-            $array[$guidVariation ?? $guid] = [
-                'name' => (string) $simpleXMLElement->{'Наименование'},
-                'meta' => $meta,
-            ];
+            $array[$guidVariation ?? $guid]['name'] = (string) $simpleXMLElement->{'Наименование'};
+            $array[$guidVariation ?? $guid]['meta'] = $meta;
 
             if ($guidVariation) {
                 $variantKey = Str::lower(urlencode('вариант'));
