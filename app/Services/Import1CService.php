@@ -182,7 +182,7 @@ class Import1CService extends AbstractFile1CService
         foreach ($this->xml->{'Каталог'}->{'Товары'}->{'Товар'} as $simpleXMLElement) {
             $simpleXMLElementAttributes = ((array) $simpleXMLElement->attributes())['@attributes'] ?? [];
 
-            if ($skipDeleted && in_array('Удалён', $simpleXMLElementAttributes)) continue;
+            if ($skipDeleted && ($simpleXMLElementAttributes['Статус'] ?? null) === 'Удален') continue;
 
             $guid = (string) $simpleXMLElement->{'Ид'};
             $sku = (string) $simpleXMLElement->{'Артикул'};
