@@ -13,13 +13,15 @@ class Offers1CService extends AbstractFile1CService
         $this->xml = $this->getXml();
     }
 
-    public function getOffersFromXml(array $array = []): array
+    public function getOffersFromXml(array $array): array
     {
         foreach ($this->xml->{'ПакетПредложений'}->{'Предложения'}->{'Предложение'} as $simpleXMLElement)
         {
             $guidParts = explode('#', (string) $simpleXMLElement->{'Ид'});
             $guid = $guidParts[0];
             $guidVariation = $guidParts[1] ?? null;
+
+            if (!isset($array[$guid])) continue;
 
             if ($guidVariation) {
                 $meta = [];
