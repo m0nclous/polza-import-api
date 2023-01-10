@@ -55,7 +55,7 @@ class Offers1CService extends AbstractFile1CService
 
                 $variationName = trim(
                     preg_replace(
-                        '/(' . preg_quote($array[$guid]['name']) . ')|\(|\)/',
+                        '/(' . preg_quote($array[$guid]['name'], '/') . ')|\(|\)/',
                         '',
                         $array[$guidVariation]['name']
                     )
