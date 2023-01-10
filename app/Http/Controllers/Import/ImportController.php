@@ -11,6 +11,7 @@ use App\Models\Wp\TermTaxonomy;
 use App\Services\Import1CService;
 use App\Services\ImportCacheImageService;
 use App\Services\ImportCacheService;
+use Cviebrock\EloquentSluggable\Services\SlugService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
@@ -35,7 +36,7 @@ class ImportController extends Controller
                 continue;
             }
 
-            $term = Term::create(['name' => $group['name'], 'slug' => Str::slug($group['name'])]);
+            $term = Term::create(['name' => $group['name']]);
             $termMetaGuid = TermMeta::make(['meta_key' => TermMeta::META_KEY_GUID, 'meta_value' => $guid]);
             $termTaxonomyCategory = TermTaxonomy::make(
                 ['taxonomy' => 'product_cat', 'parent' => isset($group['parent']) ? $groups[$group['parent']]['id'] : 0]
