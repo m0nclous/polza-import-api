@@ -53,8 +53,16 @@ class Offers1CService extends AbstractFile1CService
             if ($guidVariation) {
                 $variantKey = 'variant';
 
+                $variationName = trim(
+                    preg_replace(
+                        '/(' . preg_quote($array[$guid]['name']) . ')|\(|\)/',
+                        '',
+                        $array[$guidVariation]['name']
+                    )
+                );
+
                 $array[$guidVariation]['parent'] = $guid;
-                $array[$guidVariation]['meta']['attribute_' . $variantKey] = $array[$guidVariation]['name'];
+                $array[$guidVariation]['meta']['attribute_' . $variantKey] = $variationName;
 
                 $_product_attributes = $array[$guid]['meta']['_product_attributes'] ?? [
                     $variantKey => [
@@ -68,13 +76,13 @@ class Offers1CService extends AbstractFile1CService
                 ];
 
                 if (empty($_product_attributes[$variantKey]['value'])) {
-                    $_product_attributes[$variantKey]['value'] = $array[$guidVariation]['name'];
+                    $_product_attributes[$variantKey]['value'] = $variationName;
                 } else {
-                    $_product_attributes[$variantKey]['value'] .= ' | ' . $array[$guidVariation]['name'];
+                    $_product_attributes[$variantKey]['value'] .= ' | ' . $variationName;
                 }
 
                 if (!isset($array[$guid]['meta']['_default_attributes']) && $meta['_stock'] > 0) {
-                    $array[$guid]['meta']['_default_attributes'] = [$variantKey => $array[$guidVariation]['name']];
+                    $array[$guid]['meta']['_default_attributes'] = [$variantKey => $variationName];
                 }
 
                 $array[$guid]['meta']['_product_attributes'] = $_product_attributes;
