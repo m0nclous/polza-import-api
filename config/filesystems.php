@@ -28,6 +28,8 @@ return [
     |
     */
 
+    'upload_per_request' => env('UPLOAD_PER_REQUEST', 10),
+
     'disks' => [
 
         'local' => [
@@ -54,6 +56,26 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
+        ],
+
+        'wordpress-upload' => [
+            'driver' => 'local',
+            'root' => env('WP_UPLOAD_DIR'),
+            'throw' => true,
+        ],
+
+        'ftp' => [
+            'driver' => 'ftp',
+            'host' => env('FTP_HOST'),
+            'username' => env('FTP_USERNAME'),
+            'password' => env('FTP_PASSWORD'),
+
+            // Optional FTP Settings...
+            // 'port' => env('FTP_PORT', 21),
+            // 'root' => env('FTP_ROOT'),
+            // 'passive' => true,
+            // 'ssl' => true,
+            // 'timeout' => 30,
         ],
 
     ],
