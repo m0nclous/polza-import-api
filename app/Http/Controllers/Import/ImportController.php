@@ -11,7 +11,6 @@ use App\Models\Wp\TermTaxonomy;
 use App\Services\Import1CService;
 use App\Services\ImportCacheImageService;
 use App\Services\ImportCacheService;
-use Cviebrock\EloquentSluggable\Services\SlugService;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
@@ -57,7 +56,7 @@ class ImportController extends Controller
     {
         $cursor = $request->input('cursor', 1);
         $_productsCache = ImportCacheService::get();
-        $productsCacheChunks = array_chunk($_productsCache, 10000, true);
+        $productsCacheChunks = array_chunk($_productsCache, 1000, true);
         $productsCache = $productsCacheChunks[$cursor - 1] ?? [];
 
         $postDefaultAttributes = (new Post)->getAttributes();
@@ -116,6 +115,36 @@ class ImportController extends Controller
 
         $termRelationshipModels = [];
 
+        $termsDatabase = Term::all();
+        $termTaxonomiesDatabase = TermTaxonomy::all();
+        foreach ($productsCache as $guid => $productsItem) {
+            foreach ($productsItem['taxonomy'] ?? [] as $taxonomyKey => $productTerms) {
+                foreach ($productTerms as $term) {
+                    if (!$termsDatabase->where('slug', $term->slug)->count()) {
+                        $term->save();
+                        $termsDatabase->push($term);
+                    } else {
+                        $term = $termsDatabase->where('slug', $term->slug)->first();
+                    }
+
+                    $termTaxonomy = $termTaxonomiesDatabase->where('taxonomy', 'pa_' . $taxonomyKey)->where(
+                        'term_id',
+                        $term->term_id
+                    )->first();
+
+                    if (!$termTaxonomy) {
+                        $termTaxonomy = TermTaxonomy::create(
+                            ['taxonomy' => 'pa_' . $taxonomyKey, 'term_id' => $term->term_id]
+                        );
+
+                        $termTaxonomiesDatabase->push($termTaxonomy);
+                    }
+
+                    $termRelationshipModels[] = ['object_id' => $simpleProductPosts->get($guid)->ID, 'term_taxonomy_id' => $termTaxonomy->term_taxonomy_id];
+                }
+            }
+        }
+
         foreach (Post::typeProduct()->orWhere(fn($query) => $query->typeVariation())->get() as $post) {
             $productCache = $productsCache[$post->guid] ?? null;
             if (!$productCache) {
@@ -145,11 +174,7 @@ class ImportController extends Controller
         }
 
         foreach (array_chunk($termRelationshipModels, 1000) as $chunkTermRelationshipModels) {
-            TermRelationships::upsert(
-                $chunkTermRelationshipModels,
-                ['object_id', 'term_taxonomy_id'],
-                ['term_taxonomy_id']
-            );
+            TermRelationships::insertOrIgnore($chunkTermRelationshipModels);
         }
 
         return ['count' => count($productsCache)];

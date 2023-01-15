@@ -2,8 +2,6 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Str;
-
 class Offers1CService extends AbstractFile1CService
 {
     protected string $fileName = 'offers0_1.xml';
@@ -88,6 +86,17 @@ class Offers1CService extends AbstractFile1CService
                 }
 
                 $array[$guid]['meta']['_product_attributes'] = $_product_attributes;
+            }
+
+            foreach ($array[$guid]['taxonomy'] ?? [] as $taxonomyKey => $terms) {
+                $array[$guid]['meta']['_product_attributes']['pa_' . $taxonomyKey] = [
+                    'name' => 'pa_' . $taxonomyKey,
+                    'value' => '',
+                    'position' => 1,
+                    'is_visible' => 1,
+                    'is_variation' => 0,
+                    'is_taxonomy' => 1,
+                ];
             }
         }
 

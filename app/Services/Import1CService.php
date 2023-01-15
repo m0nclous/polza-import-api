@@ -2,12 +2,14 @@
 
 namespace App\Services;
 
+use App\Models\Wp\Term;
 use App\Models\Wp\TermMeta;
 use App\Models\Wp\TermTaxonomy;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use SimpleXMLElement;
+use Str;
 
 class Import1CService extends AbstractFile1CService
 {
@@ -114,6 +116,7 @@ class Import1CService extends AbstractFile1CService
         // Бренд
         '160c4979-9427-11e9-a757-f44d30ea45fe' => [
             'name' => 'brand',
+            'isTaxonomy' => true,
         ],
 
         // Группа сайта Польза
@@ -217,6 +220,11 @@ class Import1CService extends AbstractFile1CService
                     continue;
                 }
 
+                if ($propertyInfo['isTaxonomy'] ?? false) {
+                    $array[$guid]['taxonomy'][$propertyInfo['name']][] = Term::make(['name' => $propertyValue, 'slug' => Str::slug($propertyValue)]);
+                    continue;
+                }
+
                 if ($propertyInfo['name'] === 'content' && !empty($propertyValue)) {
                     $array[$guid]['content'] = $propertyValue;
                     continue;
@@ -255,10 +263,5 @@ class Import1CService extends AbstractFile1CService
     public function setSyncGroupsCache(array $groups): void
     {
         Cache::set('syncGroups', $groups, Carbon::now()->addHour());
-    }
-
-    public function getSyncGroupsCache(): ?array
-    {
-        return Cache::get('syncGroups');
     }
 }
